@@ -1,4 +1,4 @@
-# csvbox-react
+# @csvbox/react
 
 > React adapter for csvbox.io
 
