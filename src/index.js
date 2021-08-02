@@ -14,6 +14,7 @@ export class CSVBoxButton extends Component {
   componentDidMount() {
     const { onImport } = this.props;
     const {user} = this.props;
+
     window.addEventListener("message", (event) => {
       if (event.data === "mainModalHidden") {
           this.holder.current.style.display = 'none';
@@ -73,14 +74,27 @@ export class CSVBoxButton extends Component {
       position: "absolute"
     };
 
-    return (
-      <div>
-        <button onClick={this.openModal}>{this.props.children}</button>
-        <div ref={this.holder} style={holderStyle}>
-          <iframe ref={this.iframe} style={iframeStyle} src={ iframeSrc } frameBorder="0" ></iframe>
+    if(this.props.render) {
+      return (
+        <div>
+          {this.props.render(this.openModal)}
+          <div ref={this.holder} style={holderStyle}>
+            <iframe ref={this.iframe} style={iframeStyle} src={ iframeSrc } frameBorder="0" ></iframe>
+          </div>
         </div>
-      </div>
-    )
+      )
+    }else{
+      return (
+        <div>
+          <button onClick={this.openModal}>{this.props.children}</button>
+          <div ref={this.holder} style={holderStyle}>
+            <iframe ref={this.iframe} style={iframeStyle} src={ iframeSrc } frameBorder="0" ></iframe>
+          </div>
+        </div>
+      )
+    }
+
+
   }
 }
 
