@@ -56,11 +56,28 @@ export class CSVBoxButton extends Component {
   render() {
     const { licenseKey } = this.props;
     let iframeSrc = "https://app.csvbox.io/embed/" + licenseKey;
+
+    const holderStyle = {
+      display: "none",
+      zIndex: 2147483647,
+      position: "fixed",
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0
+    };
+
+    const iframeStyle = {
+      height: "100%",
+      width: "100%",
+      position: "absolute"
+    };
+
     return (
       <div>
         <button onClick={this.openModal}>{this.props.children}</button>
-        <div ref={this.holder} className={styles.holder} style={{ display: 'none' }}>
-          <iframe ref={this.iframe} className={styles.iframe} src={ iframeSrc } frameBorder="0" ></iframe>
+        <div ref={this.holder} style={holderStyle}>
+          <iframe ref={this.iframe} style={iframeStyle} src={ iframeSrc } frameBorder="0" ></iframe>
         </div>
       </div>
     )

@@ -1,7 +1,6 @@
 import React from 'react'
 
 import { CSVBoxButton } from '@csvbox/react'
-import '@csvbox/react/dist/index.css'
 
 const App = () => {
   return <CSVBoxButton licenseKey="Sheet license key" user={{

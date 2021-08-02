@@ -13,7 +13,6 @@ npm install @csvbox/react
 ## Import
 ```js
 import { CSVBoxButton } from '@csvbox/react'
-import '@csvbox/react/dist/index.css'
 ```
 
 ## Usage
