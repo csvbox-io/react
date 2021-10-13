@@ -71,7 +71,9 @@ export class CSVBoxButton extends Component {
     const iframeStyle = {
       height: "100%",
       width: "100%",
-      position: "absolute"
+      position: "absolute",
+      top: "0px",
+      left: "0px"
     };
 
     if(this.props.render) {
