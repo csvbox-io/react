@@ -13,7 +13,8 @@ export class CSVBoxButton extends Component {
 
   componentDidMount() {
     const { onImport } = this.props;
-    const {user} = this.props;
+    const { user } = this.props;
+    const { dynamicColumns } = this.props;
 
     window.addEventListener("message", (event) => {
       if (event.data === "mainModalHidden") {
@@ -43,6 +44,11 @@ export class CSVBoxButton extends Component {
       if(user){
         iframe.contentWindow.postMessage({
           "customer" : user
+        }, "*");
+      }
+      if(dynamicColumns){
+        iframe.contentWindow.postMessage({
+          "columns" : dynamicColumns
         }, "*");
       }
     }
