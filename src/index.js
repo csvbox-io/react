@@ -12,6 +12,17 @@ export class CSVBoxButton extends Component {
   }
 
   componentDidMount() {
+
+    if(document.querySelector("[data-csvbox]") != null) {
+      document.onreadystatechange = () => {
+        if (document.readyState === 'complete') {
+          document.querySelector("[data-csvbox]").disabled = false;
+        }else{
+          document.querySelector("[data-csvbox]").disabled = true;
+        }
+      };
+    }
+
     const { onImport } = this.props;
     const { user } = this.props;
     const { dynamicColumns } = this.props;
@@ -94,7 +105,7 @@ export class CSVBoxButton extends Component {
     }else{
       return (
         <div>
-          <button onClick={this.openModal}>{this.props.children}</button>
+          <button data-csvbox onClick={this.openModal}>{this.props.children}</button>
           <div ref={this.holder} style={holderStyle}>
             <iframe ref={this.iframe} style={iframeStyle} src={ iframeSrc } frameBorder="0" ></iframe>
           </div>
