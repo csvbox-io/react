@@ -1,6 +1,6 @@
 {
   "name": "@csvbox/react",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "React adapter for csvbox.io",
   "author": "csvbox-io",
   "license": "MIT",
