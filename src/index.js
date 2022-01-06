@@ -20,7 +20,7 @@ export class CSVBoxButton extends Component {
     window.addEventListener("message", (event) => {
       if (event.data === "mainModalHidden") {
           this.holder.current.style.display = 'none';
-          this.holder.current.querySelector('iframe').src = this.holder.current.querySelector('iframe').src;
+          // this.holder.current.querySelector('iframe').src = this.holder.current.querySelector('iframe').src;
           this.isModalShown = false;
       }
       if(event.data === "uploadSuccessful") {
