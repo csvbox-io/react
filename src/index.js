@@ -16,11 +16,11 @@ export class CSVBoxButton extends Component {
     const { onImport } = this.props;
     const { user } = this.props;
     const { dynamicColumns } = this.props;
+    const { options } = this.props;
 
     window.addEventListener("message", (event) => {
       if (event.data === "mainModalHidden") {
           this.holder.current.style.display = 'none';
-          // this.holder.current.querySelector('iframe').src = this.holder.current.querySelector('iframe').src;
           this.isModalShown = false;
       }
       if(event.data === "uploadSuccessful") {
@@ -42,14 +42,19 @@ export class CSVBoxButton extends Component {
     }, false);
     let iframe = this.iframe.current;
     iframe.onload = function () {
-      if(user){
+      if(user) {
         iframe.contentWindow.postMessage({
           "customer" : user
         }, "*");
       }
-      if(dynamicColumns){
+      if(dynamicColumns) {
         iframe.contentWindow.postMessage({
           "columns" : dynamicColumns
+        }, "*");
+      }
+      if(options) {
+        iframe.contentWindow.postMessage({
+          "options" : options
         }, "*");
       }
     }
