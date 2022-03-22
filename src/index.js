@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import styles from './styles.module.css'
+// import styles from './styles.module.css'
 
 export class CSVBoxButton extends Component {
 
@@ -9,6 +9,12 @@ export class CSVBoxButton extends Component {
     this.iframe = React.createRef();
     this.openModal = this.openModal.bind(this)
     this.isModalShown = false;
+    this.uuid = this.generateUuid();
+
+    this.state = {
+      disabled: true
+    };
+
   }
 
   componentDidMount() {
@@ -17,11 +23,27 @@ export class CSVBoxButton extends Component {
     const { user } = this.props;
     const { dynamicColumns } = this.props;
     const { options } = this.props;
+    const { debugMode } = this.props;
+    const { useStagingServer } = this.props;
+    const { licenseKey } = this.props;
+
+    const { onReady } = this.props;
+    const { onClose } = this.props;
+
+    if(debugMode) {
+      console.log(`[Csvbox-${this.uuid}]`,"UUID:", this.uuid);
+      console.log(`[Csvbox-${this.uuid}]`,"License key:", licenseKey);
+      console.log(`[Csvbox-${this.uuid}]`,`Using ${useStagingServer ? 'staging' : 'live'} server` );
+    }
 
     window.addEventListener("message", (event) => {
+
+      // if(debugMode) { console.log(`[Csvbox-${this.uuid}]`, "Message:", event); }
+
       if (event.data === "mainModalHidden") {
           this.holder.current.style.display = 'none';
           this.isModalShown = false;
+          onClose?.();
       }
       if(event.data === "uploadSuccessful") {
         onImport(true);
@@ -30,33 +52,34 @@ export class CSVBoxButton extends Component {
         onImport(false);
       }
       if(typeof event.data == "object") {
-          if(event.data.type && event.data.type == "data-push-status") {
-              if(event.data.data.import_status = "success"){
-                onImport(true, event.data.data);
-              }else {
-                onImport(false, event.data.data);
-              }
-
+        if(event.data.type && event.data.type == "data-push-status") {
+          if(event.data.data.import_status = "success"){
+            onImport(true, event.data.data);
+          }else {
+            onImport(false, event.data.data);
           }
+        }
       }
     }, false);
     let iframe = this.iframe.current;
+
+    let self = this;
+
     iframe.onload = function () {
-      if(user) {
-        iframe.contentWindow.postMessage({
-          "customer" : user
-        }, "*");
-      }
-      if(dynamicColumns) {
-        iframe.contentWindow.postMessage({
-          "columns" : dynamicColumns
-        }, "*");
-      }
-      if(options) {
-        iframe.contentWindow.postMessage({
-          "options" : options
-        }, "*");
-      }
+
+      if(debugMode) { console.log(`[Csvbox-${self.uuid}]`,"iframe loaded"); }
+
+      onReady?.();
+
+      self.enableInitator();
+
+      iframe.contentWindow.postMessage({
+        "customer" : user ? user : null,
+        "columns" : dynamicColumns ? dynamicColumns : null,
+        "options" : options ? options : null,
+        "unique_token": this.uuid
+      }, "*");
+
     }
   }
   openModal() {
@@ -66,9 +89,24 @@ export class CSVBoxButton extends Component {
       this.holder.current.style.display = 'block';
     }
   }
+
+  generateUuid() {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  }
+
+  enableInitator() {
+    this.setState({
+      disabled: !this.state.disabled
+    })
+  }
+
   render() {
+
     const { licenseKey } = this.props;
-    let iframeSrc = "https://app.csvbox.io/embed/" + licenseKey;
+    const { useStagingServer } = this.props;
+
+    let iframeSrc = `https://${useStagingServer ? 'staging' : 'app' }.csvbox.io/embed/${licenseKey}`;
+    iframeSrc += "?library-version=2";
 
     const holderStyle = {
       display: "none",
@@ -93,16 +131,16 @@ export class CSVBoxButton extends Component {
         <div>
           {this.props.render(this.openModal)}
           <div ref={this.holder} style={holderStyle}>
-            <iframe ref={this.iframe} style={iframeStyle} src={ iframeSrc } frameBorder="0" ></iframe>
+            <iframe ref={this.iframe} style={iframeStyle} data-csvbox-token={this.uuid} src={ iframeSrc } frameBorder="0" ></iframe>
           </div>
         </div>
       )
     }else{
       return (
         <div>
-          <button onClick={this.openModal}>{this.props.children}</button>
+          <button disabled={this.state.disabled} onClick={this.openModal} data-csvbox-initator data-csvbox-token={this.uuid}>{this.props.children}</button>
           <div ref={this.holder} style={holderStyle}>
-            <iframe ref={this.iframe} style={iframeStyle} src={ iframeSrc } frameBorder="0" ></iframe>
+            <iframe ref={this.iframe} style={iframeStyle} data-csvbox-token={this.uuid} src={iframeSrc} frameBorder="0" ></iframe>
           </div>
         </div>
       )
