@@ -41,7 +41,9 @@ export class CSVBoxButton extends Component {
       // if(debugMode) { console.log(`[Csvbox-${this.uuid}]`, "Message:", event); }
 
       if (event.data === "mainModalHidden") {
-          this.holder.current.style.display = 'none';
+          if (this.holder && this.holder.current) {
+            this.holder.current.style.display = 'none';
+          };
           this.isModalShown = false;
           onClose?.();
       }
