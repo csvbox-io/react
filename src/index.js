@@ -69,26 +69,36 @@ export class CSVBoxButton extends Component {
               let headers = event.data.headers;
               let rows = [];
               let dynamic_columns_indexes = event.data.dynamicColumnsIndexes;
+              let virtual_columns_indexes = event.data.virtualColumnsIndexes || [];
+
               let dropdown_display_labels_mappings = event.data.dropdown_display_labels_mappings;
               primary_row_data.forEach((row_data) => {
                   let x = {};
                   let dynamic_columns = {};
+                  let virtual_data = {};
                   row_data.data.forEach((col, i)=>{
                       if(col == undefined){ col = "" }
                       if(!!dropdown_display_labels_mappings[i] && !!dropdown_display_labels_mappings[i][col]) {
                           col = dropdown_display_labels_mappings[i][col];
                       }
                       if(dynamic_columns_indexes.includes(i)) {
-                          dynamic_columns[headers[i]] = col;
-                      }else{
+                        dynamic_columns[headers[i]] = col;
+                      }
+                      else if(virtual_columns_indexes.includes(i)) {
+                        virtual_data[headers[i]] = col;
+                      }
+                      else{
                           x[headers[i]] = col;
                       }
                   });
                   if(row_data.unmapped_data) {
-                      x["_unmapped_data"] = row_data.unmapped_data;
+                    x["_unmapped_data"] = row_data.unmapped_data;
                   }
                   if(dynamic_columns && Object.keys(dynamic_columns).length > 0) {
-                      x["_dynamic_data"] = dynamic_columns;
+                    x["_dynamic_data"] = dynamic_columns;
+                  }
+                  if(virtual_data && Object.keys(virtual_data).length > 0) {
+                    x["_virtual_data"] = virtual_data;
                   }
                   rows.push(x);
               });
