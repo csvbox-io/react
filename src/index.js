@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
 // import styles from './styles.module.css'
-
 import { version } from '../package.json';
 
 export class CSVBoxButton extends Component {
@@ -8,28 +7,60 @@ export class CSVBoxButton extends Component {
   constructor(props) {
     super(props)
     this.holder = React.createRef();
-    this.iframe = React.createRef();
+    // this.iframe = React.createRef();
     this.openModal = this.openModal.bind(this)
     this.isModalShown = false;
+    this.shouldOpenModalOnReady = false;
     this.uuid = this.generateUuid();
     this.state = {
-      disabled: true
+      isLoading: true
     };
+    this.iframe = null;
   }
 
   componentDidMount() {
+    const { lazy } = this.props;
+    if(lazy) {
+      this.enableInitator();
+    } else {
+        this.initImporter();
+    }
+  }
 
-    const { onImport } = this.props;
+  initImporter() {
+
     const { user } = this.props;
     const { dynamicColumns } = this.props;
     const { options } = this.props;
     const { onReady } = this.props;
+    const { onImport } = this.props;
     const { onSubmit } = this.props;
     const { onClose } = this.props;
+    const { licenseKey } = this.props;
+    const { dataLocation } = this.props;
+    const { customDomain } = this.props;
+    const { language } = this.props;
+
+    let domain = customDomain ? customDomain : "app.csvbox.io";
+
+    if(dataLocation) {
+      domain = `${dataLocation}-${domain}`;
+    }
+
+    let iframeUrl = `https://${domain}/embed/${licenseKey}`;
+
+    iframeUrl += `?library-version=${version}`;
+    iframeUrl += "&framework=react";
+
+    if(dataLocation) {
+      iframeUrl += "&preventRedirect";
+    }
+
+    if(language) {
+      iframeUrl += "&language=" + language;
+    }
 
     window.addEventListener("message", (event) => {
-
-      // console.log("message", event);
 
       if (event.data === "mainModalHidden") {
         if (this.holder && this.holder.current) {
@@ -118,35 +149,64 @@ export class CSVBoxButton extends Component {
             this.onImport?.(false);
           }
         }
-
-
       }
     }, false);
-    let iframe = this.iframe.current;
 
     let self = this;
 
+    let iframe = document.createElement("iframe");
+    this.iframe = iframe;
+    iframe.setAttribute("src", iframeUrl);
+    iframe.frameBorder = 0;
+    iframe.classList.add('csvbox-iframe');
+
+    iframe.style.height = "100%";
+    iframe.style.width = "100%";
+    iframe.style.position = "absolute";
+    iframe.style.top = "0px";
+    iframe.style.left = "0px";
+
+    window.addEventListener("message", this.onMessageEvent, false);
+
     iframe.onload = function () {
-
-      onReady?.();
-
       self.enableInitator();
-
       iframe.contentWindow.postMessage({
         "customer" : user ? user : null,
         "columns" : dynamicColumns ? dynamicColumns : null,
         "options" : options ? options : null,
         "unique_token": self.uuid
       }, "*");
-
+      onReady?.();
+      if(self.shouldOpenModalOnReady) {
+        self.openModal();
+        self.shouldOpenModalOnReady = false;
+      }
     }
+    this.holder.current.appendChild(iframe);
   }
+
   openModal() {
-    if(!this.isModalShown) {
-      this.isModalShown = true;
-      this.iframe.current.contentWindow.postMessage('openModal', '*');
-      this.holder.current.style.display = 'block';
+
+    const { lazy } = this.props;
+
+    if(lazy) {
+      if(!this.iframe) {
+          this.shouldOpenModalOnReady = true;
+          this.initImporter();
+          return;
+      }
     }
+
+    if(!this.isModalShown) {
+      if(!this.state.isLoading) {
+        this.isModalShown = true;
+        this.iframe.contentWindow.postMessage('openModal', '*');
+        this.holder.current.style.display = 'block';
+      } else {
+        this.shouldOpenModalOnReady = true;
+      }
+    }
+
   }
 
   generateUuid() {
@@ -155,30 +215,11 @@ export class CSVBoxButton extends Component {
 
   enableInitator() {
     this.setState({
-      disabled: !this.state.disabled
+      isLoading: false
     })
   }
 
   render() {
-
-    const { licenseKey } = this.props;
-    const { dataLocation } = this.props;
-    const { customDomain } = this.props;
-
-    let domain = customDomain ? customDomain : "app.csvbox.io";
-
-    if(dataLocation) {
-      domain = `${dataLocation}-${domain}`;
-    }
-
-    let iframeUrl = `https://${domain}/embed/${licenseKey}`;
-
-    iframeUrl += `?library-version=${version}`;
-    iframeUrl += "&framework=react";
-
-    if(dataLocation) {
-      iframeUrl += "&preventRedirect";
-    }
 
     const holderStyle = {
       display: "none",
@@ -190,30 +231,18 @@ export class CSVBoxButton extends Component {
       right: 0
     };
 
-    const iframeStyle = {
-      height: "100%",
-      width: "100%",
-      position: "absolute",
-      top: "0px",
-      left: "0px"
-    };
-
     if(this.props.render) {
       return (
         <div>
-          {this.props.render(this.openModal, !this.state.disabled)}
-          <div ref={this.holder} style={holderStyle}>
-            <iframe ref={this.iframe} style={iframeStyle} data-csvbox-token={this.uuid} src={iframeUrl} frameBorder="0" ></iframe>
-          </div>
+          {this.props.render(this.openModal, this.state.isLoading)}
+          <div ref={this.holder} style={holderStyle}></div>
         </div>
       )
     }else{
       return (
         <div>
-          <button disabled={this.state.disabled} onClick={this.openModal} data-csvbox-initator data-csvbox-token={this.uuid}>{this.props.children}</button>
-          <div ref={this.holder} style={holderStyle}>
-            <iframe ref={this.iframe} style={iframeStyle} data-csvbox-token={this.uuid} src={iframeUrl} frameBorder="0" ></iframe>
-          </div>
+          <button disabled={this.state.isLoading} onClick={this.openModal} data-csvbox-initator data-csvbox-token={this.uuid}>{this.props.children}</button>
+          <div ref={this.holder} style={holderStyle}></div>
         </div>
       )
     }
