@@ -13,17 +13,21 @@ export class CSVBoxButton extends Component {
     this.shouldOpenModalOnReady = false;
     this.uuid = this.generateUuid();
     this.state = {
-      isLoading: true
+      isLoading: true,
+      firstLoad: true, //For React v18's componentDidMount fix
     };
     this.iframe = null;
   }
 
   componentDidMount() {
     const { lazy } = this.props;
-    if(lazy) {
-      this.enableInitator();
-    } else {
-        this.initImporter();
+    if(this.state.firstLoad) {
+      this.setState({ firstLoad: false })
+      if(lazy) {
+        this.enableInitator();
+      } else {
+          this.initImporter();
+      }
     }
   }
 
