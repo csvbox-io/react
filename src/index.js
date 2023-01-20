@@ -7,27 +7,22 @@ export class CSVBoxButton extends Component {
   constructor(props) {
     super(props)
     this.holder = React.createRef();
-    // this.iframe = React.createRef();
     this.openModal = this.openModal.bind(this)
     this.isModalShown = false;
     this.shouldOpenModalOnReady = false;
     this.uuid = this.generateUuid();
     this.state = {
-      isLoading: true,
-      firstLoad: true, //For React v18's componentDidMount fix
+      isLoading: true
     };
     this.iframe = null;
   }
 
   componentDidMount() {
     const { lazy } = this.props;
-    if(this.state.firstLoad) {
-      this.setState({ firstLoad: false })
-      if(lazy) {
-        this.enableInitator();
-      } else {
-          this.initImporter();
-      }
+    if(!lazy && !this.iframe) {
+      this.initImporter();
+    }else if(lazy) {
+      this.enableInitator();
     }
   }
 
