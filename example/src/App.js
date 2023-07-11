@@ -6,6 +6,9 @@ const App = () => {
   return <CSVBoxButton licenseKey="Sheet license key" user={{
     user_id: "default123"
   }}
+  loadStarted={() => {
+    console.log("loadStarted");
+  }}
   onReady={() => {
     console.log("onReady");
   }}
@@ -17,6 +20,7 @@ const App = () => {
     console.log(data);
   }}
   onImport={(result, data) => {
+    console.log("onImport");
     if(result){
       console.log("success");
       console.log(data.row_success + " rows uploaded");

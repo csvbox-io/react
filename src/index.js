@@ -28,6 +28,10 @@ export class CSVBoxButton extends Component {
 
   initImporter() {
 
+    const { loadStarted } = this.props;
+
+    loadStarted?.();
+
     const { user } = this.props;
     const { dynamicColumns } = this.props;
     const { options } = this.props;
@@ -85,7 +89,7 @@ export class CSVBoxButton extends Component {
             onSubmit?.(metadata);
           }
           else if(event.data.type && event.data.type == "data-push-status") {
-            if(event.data.data.import_status = "success"){
+            if(event.data.data.import_status == "success") {
               if(event.data && event.data.row_data) {
                 let primary_row_data = event.data.row_data;
                 let headers = event.data.headers;
