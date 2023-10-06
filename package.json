@@ -2,6 +2,7 @@
   "name": "@csvbox/react",
   "version": "1.1.8",
   "description": "React adapter for csvbox.io",
+  "types": "@types/csvbox__react.d.ts",
   "author": "csvbox-io",
   "license": "MIT",
   "repository": {
@@ -52,7 +53,8 @@
     "react-scripts": "^3.4.1"
   },
   "files": [
-    "dist"
+    "dist",
+    "@types/csvbox__react.d.ts"
   ],
   "keywords": [
     "csv",
