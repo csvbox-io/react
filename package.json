@@ -1,6 +1,6 @@
 {
   "name": "@csvbox/react",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "description": "React adapter for csvbox.io",
   "types": "@types/csvbox__react.d.ts",
   "author": "csvbox-io",
