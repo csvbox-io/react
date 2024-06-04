@@ -14,9 +14,10 @@ declare module '@csvbox/react' {
         dataLocation?: string;
         customDomain?: string;
         language?: string;
+        environment?: any;
         render?:(launch:any, isLoading:boolean) => void
     }
-    
+
     export class CSVBoxButton extends React.Component<PropsWithChildren<CSVBoxImporterProps>>{
         constructor(props: CSVBoxImporterProps);
 
