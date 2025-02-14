@@ -110,7 +110,7 @@ export class CSVBoxButton extends Component {
                     let x = {};
                     let dynamic_columns = {};
                     let virtual_data = {};
-                    row_data.data.forEach((col, i)=>{
+                    row_data.data?.forEach((col, i) => {
                         if(col == undefined){ col = "" }
                         if(!!dropdown_display_labels_mappings[i] && !!dropdown_display_labels_mappings[i][col]) {
                             col = dropdown_display_labels_mappings[i][col];
