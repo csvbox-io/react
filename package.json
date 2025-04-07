@@ -1,6 +1,6 @@
 {
   "name": "@csvbox/react",
-  "version": "1.1.12",
+  "version": "1.1.13",
   "description": "React adapter for csvbox.io",
   "types": "@types/csvbox__react.d.ts",
   "author": "csvbox-io",
@@ -28,8 +28,8 @@
     "deploy": "gh-pages -d example/build"
   },
   "peerDependencies": {
-    "react": "^16.13.1 || ^17.0.2 || ^ 18.0.0",
-    "react-dom": "^16.13.1 || ^17.0.2 || ^18.0.0"
+    "react": "^16.13.1 || ^17.0.2 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^16.13.1 || ^17.0.2 || ^18.0.0 || ^19.0.0"
   },
   "devDependencies": {
     "babel-eslint": "^10.0.3",
