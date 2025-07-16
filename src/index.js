@@ -44,6 +44,7 @@ export class CSVBoxButton extends Component {
     const { customDomain } = this.props;
     const { language } = this.props;
     const { environment } = this.props;
+    const { theme } = this.props;
 
     let domain = customDomain ? customDomain : "app.csvbox.io";
 
@@ -62,6 +63,10 @@ export class CSVBoxButton extends Component {
 
     if(language) {
       iframeUrl += "&language=" + language;
+    }
+
+    if(theme) {
+      iframeUrl += "&theme=" + theme;
     }
 
     if(environment) {

@@ -15,6 +15,7 @@ declare module '@csvbox/react' {
         customDomain?: string;
         language?: string;
         environment?: any;
+        theme?: string;
         render?:(launch:any, isLoading:boolean) => void
     }
 
