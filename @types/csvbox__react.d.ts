@@ -23,14 +23,10 @@ declare module '@csvbox/react' {
         constructor(props: CSVBoxImporterProps);
 
         holder: React.RefObject<HTMLDivElement>;
-        isModalShown: boolean;
-        shouldOpenModalOnReady: boolean;
         uuid: string;
         iframe: HTMLIFrameElement | null;
 
         openModal(): void;
-
-        generateUuid(): string;
 
         componentDidMount(): void;
 
