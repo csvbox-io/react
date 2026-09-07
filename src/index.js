@@ -103,6 +103,7 @@ export class CSVBoxButton extends Component {
 		const iframe = document.createElement("iframe");
 		this.iframe = iframe;
 		iframe.setAttribute("src", iframeUrl);
+		iframe.setAttribute("allow", "clipboard-read; clipboard-write *");
 		iframe.frameBorder = 0;
 		iframe.classList.add('csvbox-iframe');
 		Object.assign(iframe.style, IFRAME_STYLE);
