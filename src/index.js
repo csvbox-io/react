@@ -8,8 +8,10 @@ export class CSVBoxButton extends Component {
     super(props)
     this.holder = React.createRef();
     this.openModal = this.openModal.bind(this)
+    this.openModalWithFile = this.openModalWithFile.bind(this)
     this.isModalShown = false;
     this.shouldOpenModalOnReady = false;
+    this.pendingFile = null;
     this.uuid = this.generateUuid();
     this.state = {
       isLoading: true
@@ -51,6 +53,12 @@ export class CSVBoxButton extends Component {
     if(dataLocation) {
       domain = `${dataLocation}-${domain}`;
     }
+
+    // Only postPendingFile() uses this. The config messages keep their "*" target: narrowing
+    // those would silently drop the handshake for any customDomain that redirects to another
+    // host, and breaking existing importers is not worth it. A file is different — its bytes
+    // are the end user's, so they go to a named origin or nowhere.
+    this.targetOrigin = `https://${domain}`;
 
     let iframeUrl = `https://${domain}/embed/${licenseKey}`;
 
@@ -220,13 +228,60 @@ export class CSVBoxButton extends Component {
     if(!this.isModalShown) {
       if(!this.state.isLoading) {
         this.isModalShown = true;
-        this.iframe.contentWindow.postMessage('openModal', '*');
+        if(this.pendingFile) {
+          // The importer opens its own modal once it has the file, so that it can inject on
+          // 'shown.bs.modal'. Sending 'openModal' as well would race that.
+          this.postPendingFile();
+        } else {
+          this.iframe.contentWindow.postMessage('openModal', '*');
+        }
         this.holder.current.style.display = 'block';
       } else {
         this.shouldOpenModalOnReady = true;
       }
     }
 
+  }
+
+  /**
+   * Open the importer on a File the host page already has, instead of the file picker.
+   *
+   * Reachable two ways: a ref on the component (`ref.current.openModalWithFile(file)`), or
+   * the third argument handed to the `render` prop.
+   *
+   * The File crosses to the iframe by structured clone, so the importer receives the real
+   * object and applies its own extension, worksheet and size rules to it — this does not
+   * bypass any of them. Pass a File; a Blob has no name for the importer to read an
+   * extension from.
+   */
+  openModalWithFile(file) {
+
+    // window.File, not a bare File: eslint-config-standard declares only window, document
+    // and navigator as browser globals, so a bare File is a no-undef error here.
+    if(!window.File || !(file instanceof window.File)) {
+      return;
+    }
+
+    this.pendingFile = file;
+
+    // Already open: hand it over now rather than holding it for the next open. The importer
+    // takes it only while it is still on the upload step, and ignores it once the user has a
+    // dataset and a mapping in progress.
+    if(this.isModalShown && this.iframe && !this.state.isLoading) {
+      this.postPendingFile();
+      return;
+    }
+
+    this.openModal();
+  }
+
+  postPendingFile() {
+    this.iframe.contentWindow.postMessage({
+      type: 'csvbox-set-file',
+      file: this.pendingFile,
+      unique_token: this.uuid
+    }, this.targetOrigin);
+    this.pendingFile = null;
   }
 
   generateUuid() {
@@ -254,7 +309,7 @@ export class CSVBoxButton extends Component {
     if(this.props.render) {
       return (
         <div>
-          {this.props.render(this.openModal, this.state.isLoading)}
+          {this.props.render(this.openModal, this.state.isLoading, this.openModalWithFile)}
           <div ref={this.holder} style={holderStyle}></div>
         </div>
       )
