@@ -164,9 +164,29 @@ export class CSVBoxButton extends Component {
             }else {
               onImport(false, event.data.data);
             }
+          } else if(event.data.type && event.data.type == "csvbox-modal-shown") {
+            // What the file path in openModal() is waiting for. display as well as
+            // pointer-events: a second file declined while the first was still opening the
+            // modal has put the holder away in the meantime.
+            this.isModalShown = true;
+            if (this.holder && this.holder.current) {
+              this.holder.current.style.display = 'block';
+              this.holder.current.style.pointerEvents = 'auto';
+            };
+          } else if(event.data.type && event.data.type == "csvbox-set-file-rejected") {
+            // The importer has the file and will not take it. Put the holder away only if the
+            // modal was never confirmed up: a file declined while it is open (an import past
+            // the upload step, a fade-out under way) leaves that modal where it is, and its
+            // own 'csvbox-modal-hidden' will put the holder away when it closes.
+            if (!this.isModalShown && this.holder && this.holder.current) {
+              this.holder.current.style.display = 'none';
+              this.holder.current.style.pointerEvents = 'auto';
+            };
+            console.warn("[csvbox] importer declined the supplied file: " + event.data.data.reason);
           } else if(event.data.type && event.data.type == "csvbox-modal-hidden") {
             if (this.holder && this.holder.current) {
               this.holder.current.style.display = 'none';
+              this.holder.current.style.pointerEvents = 'auto';
             };
             this.isModalShown = false;
             onClose?.();
@@ -197,7 +217,6 @@ export class CSVBoxButton extends Component {
     window.addEventListener("message", this.onMessageEvent, false);
 
     iframe.onload = function () {
-      self.enableInitator();
       iframe.contentWindow.postMessage({
         "customer" : user ? user : null,
         "columns" : dynamicColumns ? dynamicColumns : null,
@@ -205,10 +224,16 @@ export class CSVBoxButton extends Component {
         "unique_token": self.uuid
       }, "*");
       onReady?.();
-      if(self.shouldOpenModalOnReady) {
-        self.openModal();
-        self.shouldOpenModalOnReady = false;
-      }
+      // The deferred open waits for the state update to land. React 18+ batches setState
+      // outside its own event handlers too, so called straight after enableInitator()
+      // openModal() still saw isLoading and deferred itself again -- and the flag was then
+      // cleared, dropping the open (and any pending file) on the floor.
+      self.enableInitator(() => {
+        if(self.shouldOpenModalOnReady) {
+          self.shouldOpenModalOnReady = false;
+          self.openModal();
+        }
+      });
     }
     this.holder.current.appendChild(iframe);
   }
@@ -227,15 +252,30 @@ export class CSVBoxButton extends Component {
 
     if(!this.isModalShown) {
       if(!this.state.isLoading) {
-        this.isModalShown = true;
         if(this.pendingFile) {
           // The importer opens its own modal once it has the file, so that it can inject on
           // 'shown.bs.modal'. Sending 'openModal' as well would race that.
+          //
+          // It can also decline: wrong step, an import file URL configured on the sheet, or
+          // an importer too old to know the message at all. So the holder goes up
+          // click-through and stays that way until 'csvbox-modal-shown' confirms the modal
+          // is really up. It covers the viewport at z-index 2147483647 and the importer
+          // renders transparent with its modal closed, so arming it on an unanswered message
+          // leaves an invisible sheet over the host page eating every click.
+          //
+          // display:block regardless, so the iframe lays out and animates normally; only
+          // pointer-events is held back. isModalShown likewise waits for the confirmation,
+          // or a declined file would latch the importer shut for good.
+          this.holder.current.style.pointerEvents = 'none';
+          this.holder.current.style.display = 'block';
           this.postPendingFile();
         } else {
+          this.isModalShown = true;
           this.iframe.contentWindow.postMessage('openModal', '*');
+          // Explicit: a previously declined file leaves the holder click-through.
+          this.holder.current.style.pointerEvents = 'auto';
+          this.holder.current.style.display = 'block';
         }
-        this.holder.current.style.display = 'block';
       } else {
         this.shouldOpenModalOnReady = true;
       }
@@ -288,10 +328,10 @@ export class CSVBoxButton extends Component {
     return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
   }
 
-  enableInitator() {
+  enableInitator(callback) {
     this.setState({
       isLoading: false
-    })
+    }, callback)
   }
 
   render() {
