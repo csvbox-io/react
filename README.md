@@ -78,6 +78,17 @@ Or from the `render` prop, which is handed the same function as its third argume
 />
 ```
 
+The importer can decline a file it is handed, and says why in a console warning
+(`[csvbox] importer declined the supplied file: <reason>`):
+
+- `import-in-progress` — the importer is open past its upload step, or is still reading an
+  earlier file. An import that is already open stays open.
+- `modal-closing` — the importer was closing when the file arrived.
+- `import-file-url-configured` — the sheet is set up to load its own file from a URL.
+
+Pass a `File`, not a `Blob`: a `Blob` has no name to read an extension from, and anything that
+is not a `File` is ignored.
+
 ## Readme
 
 For usage see the guide here - https://help.csvbox.io/getting-started#2-install-code

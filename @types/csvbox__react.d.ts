@@ -42,6 +42,6 @@ declare module '@csvbox/react' {
 
         initImporter(): void;
 
-        enableInitator(): void;
+        enableInitator(callback?: () => void): void;
     }
 }
