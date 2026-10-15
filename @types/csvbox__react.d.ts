@@ -16,7 +16,7 @@ declare module '@csvbox/react' {
         language?: string;
         environment?: any;
         theme?: string;
-        render?:(launch:any, isLoading:boolean) => void
+        render?:(launch:any, isLoading:boolean, launchWithFile:(file:File) => void) => void
     }
 
     export class CSVBoxButton extends React.Component<PropsWithChildren<CSVBoxImporterProps>>{
@@ -25,8 +25,16 @@ declare module '@csvbox/react' {
         holder: React.RefObject<HTMLDivElement>;
         uuid: string;
         iframe: HTMLIFrameElement | null;
+        isModalShown: boolean;
+        isReady: boolean;
+        pendingFile: File | null;
+        targetOrigin?: string;
 
         openModal(): void;
+
+        openModalWithFile(file: File): void;
+
+        postPendingFile(): void;
 
         componentDidMount(): void;
 
