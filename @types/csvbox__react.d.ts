@@ -29,12 +29,21 @@ declare module '@csvbox/react' {
         isReady: boolean;
         pendingFile: File | null;
         targetOrigin?: string;
+        baseDomain?: string;
+        importerOrigin?: string;
+        probingOrigin?: boolean;
 
         openModal(): void;
 
         openModalWithFile(file: File): void;
 
         postPendingFile(): void;
+
+        sendPendingFile(origin: string): void;
+
+        learnImporterOrigin(event: MessageEvent): void;
+
+        isImporterOrigin(origin: string): boolean;
 
         componentDidMount(): void;
 

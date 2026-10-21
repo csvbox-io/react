@@ -11,6 +11,9 @@ import {
 	classifyLegacyMessage
 } from '@csvbox/adapter';
 
+// How long we wait for the importer to reply before sending the file anyway.
+const ORIGIN_PROBE_TIMEOUT_MS = 1500;
+
 export class CSVBoxButton extends Component {
 
 	constructor(props) {
@@ -53,11 +56,13 @@ export class CSVBoxButton extends Component {
 			version
 		);
 
-		// Only postPendingFile() uses this. The config messages keep their "*" target: narrowing
-		// those would silently drop the handshake for any customDomain that redirects to another
-		// host, and breaking existing importers is not worth it. A file is different -- its bytes
-		// are the end user's, so they go to a named origin or nowhere.
+		// Default place to send the file. A file is only ever sent to a named origin, never "*".
 		this.targetOrigin = new URL(iframeUrl).origin;
+
+		// Data-location sheets redirect to another host, so the iframe origin can differ from
+		// targetOrigin. We use this domain to check the real origin before trusting it.
+		this.baseDomain = customDomain || "app.csvbox.io";
+		this.importerOrigin = null;
 
 		const handleModalClosed = () => {
 			if (this.holder.current) {
@@ -69,6 +74,10 @@ export class CSVBoxButton extends Component {
 			this.isModalShown = false;
 			this.isReady = false;
 			this.iframe = null;
+			// A new iframe is built on the next open, so the origin is learned again.
+			this.importerOrigin = null;
+			this.probingOrigin = false;
+			this.clearProbeTimer();
 			onClose?.();
 		};
 
@@ -95,6 +104,12 @@ export class CSVBoxButton extends Component {
 			// read here, behind the same unique_token check the core applies.
 			const raw = event.data;
 			if (raw && typeof raw === "object" && raw.data && raw.data.unique_token == this.uuid) {
+				this.learnImporterOrigin(event);
+
+				if (raw.type === "csvbox-set-file-rejected" && raw.data.reason === "not-a-file") {
+					// Reply to our probe (it has no file). It only tells us the origin, so do nothing.
+					return;
+				}
 				if (raw.type === "csvbox-modal-shown") {
 					// What the file path in openModal() is waiting for. display as well as
 					// pointer-events: a second file declined while the first was still opening the
@@ -237,12 +252,78 @@ export class CSVBoxButton extends Component {
 	}
 
 	postPendingFile() {
+		if (this.importerOrigin) {
+			this.sendPendingFile(this.importerOrigin);
+			return;
+		}
+
+		// Origin not known yet: send a probe without the file, and send the file to the origin
+		// that replies. If nobody replies in time, use targetOrigin like before.
+		if (this.probingOrigin) {
+			return;
+		}
+		this.probingOrigin = true;
+		this.iframe.contentWindow.postMessage({
+			type: 'csvbox-set-file',
+			unique_token: this.uuid
+		}, '*');
+		this.probeTimer = setTimeout(() => {
+			this.probeTimer = null;
+			this.probingOrigin = false;
+			this.sendPendingFile(this.targetOrigin);
+		}, ORIGIN_PROBE_TIMEOUT_MS);
+	}
+
+	sendPendingFile(origin) {
+		if (!this.pendingFile || !this.iframe) {
+			return;
+		}
 		this.iframe.contentWindow.postMessage({
 			type: 'csvbox-set-file',
 			file: this.pendingFile,
 			unique_token: this.uuid
-		}, this.targetOrigin);
+		}, origin);
 		this.pendingFile = null;
+	}
+
+	// Remember the importer's origin, only from our own iframe, with our token, and a csvbox host.
+	learnImporterOrigin(event) {
+		if (this.importerOrigin || !this.iframe || event.source !== this.iframe.contentWindow) {
+			return;
+		}
+		if (!this.isImporterOrigin(event.origin)) {
+			return;
+		}
+		this.importerOrigin = event.origin;
+		if (this.probingOrigin) {
+			this.probingOrigin = false;
+			this.clearProbeTimer();
+			this.sendPendingFile(this.importerOrigin);
+		}
+	}
+
+	isImporterOrigin(origin) {
+		let url;
+		try {
+			url = new URL(origin);
+		} catch (e) {
+			return false;
+		}
+		if (url.protocol !== 'https:') {
+			return false;
+		}
+		return url.host === this.baseDomain || url.host.endsWith(`-${this.baseDomain}`);
+	}
+
+	clearProbeTimer() {
+		if (this.probeTimer) {
+			clearTimeout(this.probeTimer);
+			this.probeTimer = null;
+		}
+	}
+
+	componentWillUnmount() {
+		this.clearProbeTimer();
 	}
 
 	enableInitiator() {
