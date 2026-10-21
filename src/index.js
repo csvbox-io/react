@@ -324,6 +324,10 @@ export class CSVBoxButton extends Component {
 
 	componentWillUnmount() {
 		this.clearProbeTimer();
+		if (this.messageListener) {
+			window.removeEventListener("message", this.messageListener, false);
+			this.messageListener = null;
+		}
 	}
 
 	enableInitiator() {
