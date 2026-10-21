@@ -14,6 +14,57 @@ import {
 // How long we wait for the importer to reply before sending the file anyway.
 const ORIGIN_PROBE_TIMEOUT_MS = 1500;
 
+// Page-wide record of the importers that are open or opening, shared by every CSVBox adapter
+// on the page (it lives on window so separate copies of an adapter see the same list). It does
+// two things: the newest importer is stacked on top (every holder is fixed, full screen and
+// z-index 2147483647, so equal z-indexes would leave the one that comes first in the DOM on
+// top), and the other instances learn that an importer is open so they can disable their button.
+const OPEN_IMPORTERS_KEY = '__csvboxOpenImporters';
+const TOP_Z_INDEX = 2147483647;
+
+function openImporters() {
+	if (!window[OPEN_IMPORTERS_KEY]) window[OPEN_IMPORTERS_KEY] = { open: [], listeners: [] };
+	return window[OPEN_IMPORTERS_KEY];
+}
+
+function restackOpenImporters(reg) {
+	reg.open.forEach(function (entry, i) {
+		const holder = entry.getHolder();
+		if (holder) holder.style.zIndex = String(TOP_Z_INDEX - (reg.open.length - 1 - i));
+	});
+}
+
+function registerOpenImporter(entry) {
+	const reg = openImporters();
+	if (reg.open.indexOf(entry) >= 0) return;
+	reg.open.push(entry);
+	restackOpenImporters(reg);
+	reg.listeners.slice().forEach(function (fn) { fn(); });
+}
+
+function unregisterOpenImporter(entry) {
+	const reg = openImporters();
+	const i = reg.open.indexOf(entry);
+	if (i < 0) return;
+	reg.open.splice(i, 1);
+	restackOpenImporters(reg);
+	reg.listeners.slice().forEach(function (fn) { fn(); });
+}
+
+function isBlockedByOpenImporter(entry) {
+	const reg = openImporters();
+	return reg.open.length > 0 && reg.open.indexOf(entry) < 0;
+}
+
+function subscribeOpenImporters(fn) {
+	const reg = openImporters();
+	reg.listeners.push(fn);
+	return function () {
+		const i = reg.listeners.indexOf(fn);
+		if (i >= 0) reg.listeners.splice(i, 1);
+	};
+}
+
 export class CSVBoxButton extends Component {
 
 	constructor(props) {
@@ -27,12 +78,17 @@ export class CSVBoxButton extends Component {
 		this.pendingFile = null;
 		this.uuid = generateUuid();
 		this.state = {
-			isLoading: true
+			isLoading: true,
+			// True while a different importer on the page is open: the button stays disabled.
+			blocked: false
 		};
 		this.iframe = null;
+		this.registryEntry = { getHolder: () => this.holder.current };
 	}
 
 	componentDidMount() {
+		this.syncBlocked();
+		this.unsubscribeOpenImporters = subscribeOpenImporters(() => this.syncBlocked());
 		const { lazy } = this.props;
 		if (!lazy && !this.iframe) {
 			this.initImporter();
@@ -78,6 +134,7 @@ export class CSVBoxButton extends Component {
 			this.importerOrigin = null;
 			this.probingOrigin = false;
 			this.clearProbeTimer();
+			unregisterOpenImporter(this.registryEntry);
 			onClose?.();
 		};
 
@@ -88,6 +145,11 @@ export class CSVBoxButton extends Component {
 		this.messageListener = (event) => {
 			const legacy = classifyLegacyMessage(event.data);
 			if (legacy) {
+				// Legacy messages carry no token, so the only way to tell which importer sent one is
+				// its window. Ignore those that came from another instance's iframe (or anywhere else).
+				if (!this.iframe || event.source !== this.iframe.contentWindow) {
+					return;
+				}
 				if (legacy.type === "mainModalHidden") {
 					handleModalClosed();
 				}
@@ -130,6 +192,7 @@ export class CSVBoxButton extends Component {
 					if (!this.isModalShown && this.holder.current) {
 						this.holder.current.style.display = 'none';
 						this.holder.current.style.pointerEvents = 'auto';
+						unregisterOpenImporter(this.registryEntry);
 					}
 					console.warn("[csvbox] importer declined the supplied file: " + raw.data.reason);
 					return;
@@ -180,6 +243,9 @@ export class CSVBoxButton extends Component {
 	}
 
 	openModal() {
+		// Counts as open from the moment it is requested, so the other buttons are disabled while
+		// this importer is still loading, and so it is stacked above any importer opened earlier.
+		registerOpenImporter(this.registryEntry);
 		if (!this.iframe) {
 			this.lifecycle.requestOpen();
 			this.initImporter();
@@ -324,9 +390,21 @@ export class CSVBoxButton extends Component {
 
 	componentWillUnmount() {
 		this.clearProbeTimer();
+		unregisterOpenImporter(this.registryEntry);
+		if (this.unsubscribeOpenImporters) {
+			this.unsubscribeOpenImporters();
+			this.unsubscribeOpenImporters = null;
+		}
 		if (this.messageListener) {
 			window.removeEventListener("message", this.messageListener, false);
 			this.messageListener = null;
+		}
+	}
+
+	syncBlocked() {
+		const blocked = isBlockedByOpenImporter(this.registryEntry);
+		if (blocked !== this.state.blocked) {
+			this.setState({ blocked });
 		}
 	}
 
@@ -340,7 +418,7 @@ export class CSVBoxButton extends Component {
 		if (this.props.render) {
 			return (
 				<div>
-					{this.props.render(this.openModal, this.state.isLoading, this.openModalWithFile)}
+					{this.props.render(this.openModal, this.state.isLoading || this.state.blocked, this.openModalWithFile)}
 					<div ref={this.holder} style={HOLDER_STYLE}></div>
 				</div>
 			)
@@ -348,7 +426,7 @@ export class CSVBoxButton extends Component {
 
 		return (
 			<div>
-				<button disabled={this.state.isLoading} onClick={this.openModal} data-csvbox-initator data-csvbox-token={this.uuid}>{this.props.children}</button>
+				<button disabled={this.state.isLoading || this.state.blocked} onClick={this.openModal} data-csvbox-initator data-csvbox-token={this.uuid}>{this.props.children}</button>
 				<div ref={this.holder} style={HOLDER_STYLE}></div>
 			</div>
 		)

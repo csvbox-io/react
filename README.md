@@ -89,6 +89,12 @@ The importer can decline a file it is handed, and says why in a console warning
 Pass a `File`, not a `Blob`: a `Blob` has no name to read an extension from, and anything that
 is not a `File` is ignored.
 
+## Several importers on one page
+
+While an importer is open (or still loading to open), the button of every other CSVBox instance on the page is disabled until it closes, so two importers are not opened by accident. In React, the second argument of the `render` prop (`isLoading`) is also `true` in that state, so a custom trigger can disable itself the same way.
+
+Opening a second importer from code (`openModal()` or `openModalWithFile()`) is still possible. The importer opened last is shown on top of the others, and closing it reveals the one underneath.
+
 ## Readme
 
 For usage see the guide here - https://help.csvbox.io/getting-started#2-install-code
