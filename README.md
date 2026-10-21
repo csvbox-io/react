@@ -89,6 +89,10 @@ The importer can decline a file it is handed, and says why in a console warning
 Pass a `File`, not a `Blob`: a `Blob` has no name to read an extension from, and anything that
 is not a `File` is ignored.
 
+When the importer redirects to another host (data-location sheets do this), the file is sent to the host the importer actually ended up on, as long as that host is your importer domain or `<region>-<your domain>` (for example `eu-app.csvbox.io` for `app.csvbox.io`). A file is never sent to any other host.
+
+If the importer does not answer a supplied file within about 8 seconds (for example because it redirected to a host that does not follow that naming, or it is too old to know the message), the importer is put away, the other buttons are enabled again, and the console says `[csvbox] the importer did not respond to the supplied file`.
+
 ## Several importers on one page
 
 While an importer is open (or still loading to open), the button of every other CSVBox instance on the page is disabled until it closes, so two importers are not opened by accident. In React, the second argument of the `render` prop (`isLoading`) is also `true` in that state, so a custom trigger can disable itself the same way.
