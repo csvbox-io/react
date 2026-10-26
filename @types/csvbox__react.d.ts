@@ -23,34 +23,22 @@ declare module '@csvbox/react' {
         constructor(props: CSVBoxImporterProps);
 
         holder: React.RefObject<HTMLDivElement>;
-        isModalShown: boolean;
-        shouldOpenModalOnReady: boolean;
         uuid: string;
         iframe: HTMLIFrameElement | null;
+        isModalShown: boolean;
+        isReady: boolean;
         pendingFile: File | null;
         targetOrigin?: string;
         baseDomain?: string;
-        importerOrigin?: string;
-        probingOrigin?: boolean;
 
         openModal(): void;
 
         openModalWithFile(file: File): void;
 
-        postPendingFile(): void;
-
-        sendPendingFile(origin: string): void;
-
-        learnImporterOrigin(event: MessageEvent): void;
-
-        isImporterOrigin(origin: string): boolean;
-
-        generateUuid(): string;
-
         componentDidMount(): void;
 
         initImporter(): void;
 
-        enableInitator(callback?: () => void): void;
+        enableInitiator(): void;
     }
 }
