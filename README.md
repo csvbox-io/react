@@ -99,6 +99,10 @@ While an importer is open (or still loading to open), the button of every other 
 
 Opening a second importer from code (`openModal()` or `openModalWithFile()`) is still possible. The importer opened last is shown on top of the others, and closing it reveals the one underneath.
 
+## Closing the importer during an import
+
+If your user submits a file and then closes the importer before the import has finished, the import carries on and your `onImport` callback is still called with the result when it completes. The importer is reloaded the next time it is opened.
+
 ## Readme
 
 For usage see the guide here - https://help.csvbox.io/getting-started#2-install-code
