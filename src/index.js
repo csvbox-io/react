@@ -141,6 +141,8 @@ export class CSVBoxButton extends Component {
 					return;
 				}
 				const ended = this.importTracker.observe(legacy);
+				// Clean up before the callbacks run: a callback that throws must not leave a closed import behind.
+				finishImport(ended);
 				if (legacy.type === "mainModalHidden") {
 					handleModalClosed();
 				}
@@ -150,7 +152,6 @@ export class CSVBoxButton extends Component {
 				if (legacy.type === "uploadFailed") {
 					onImport(false);
 				}
-				finishImport(ended);
 				return;
 			}
 
@@ -199,6 +200,7 @@ export class CSVBoxButton extends Component {
 			}
 			this.messageGate.markTyped();
 			const ended = this.importTracker.observe(message);
+			finishImport(ended);
 
 			if (message.type === "data-on-submit") {
 				onSubmit?.(message.metadata);
@@ -211,7 +213,6 @@ export class CSVBoxButton extends Component {
 			} else if (message.type === "csvbox-upload-failed") {
 				onImport(false);
 			}
-			finishImport(ended);
 		};
 
 		window.addEventListener("message", this.messageListener, false);
@@ -233,9 +234,15 @@ export class CSVBoxButton extends Component {
 			this.isReady = true;
 			this.enableInitiator();
 			iframe.contentWindow.postMessage(buildInitPayload(user, dynamicColumns, options, this.uuid), "*");
-			onReady?.();
-			if (this.lifecycle.markReady()) {
-				this.openModal();
+			// The importer is ready whatever the callback does: if onReady throws, an open that was waiting
+			// for the iframe must still go ahead.
+			const openWhenReady = this.lifecycle.markReady();
+			try {
+				onReady?.();
+			} finally {
+				if (openWhenReady) {
+					this.openModal();
+				}
 			}
 		};
 
