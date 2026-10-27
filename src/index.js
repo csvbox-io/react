@@ -69,13 +69,14 @@ export class CSVBoxButton extends Component {
 	}
 
 	initImporter() {
+		// The callbacks are not copied here: they are read from this.props whenever they are called, so a parent that
+		// re-renders with new callbacks (for example ones that use its latest state) is always called, not an old copy.
 		const {
-			loadStarted, user, dynamicColumns, options, onReady, onImport,
-			onSubmit, onClose, licenseKey, dataLocation, customDomain,
+			user, dynamicColumns, options, licenseKey, dataLocation, customDomain,
 			language, environment, theme
 		} = this.props;
 
-		loadStarted?.();
+		this.props.loadStarted?.();
 
 		const iframeUrl = buildImportUrl(
 			{ licenseKey, customDomain, dataLocation, language, theme, environment },
@@ -109,11 +110,11 @@ export class CSVBoxButton extends Component {
 				this.isModalShown = false;
 				this.clearFileAckTimer();
 				unregisterOpenImporter(this.registryEntry);
-				onClose?.();
+				this.props.onClose?.();
 				return;
 			}
 			this.destroyImporter();
-			onClose?.();
+			this.props.onClose?.();
 		};
 
 		// Called after the result of an import has been delivered. If the modal was closed in the
@@ -136,8 +137,8 @@ export class CSVBoxButton extends Component {
 				if (!this.iframe || event.source !== this.iframe.contentWindow) {
 					return;
 				}
-				// A newer importer sends the typed message as well; act on that one only.
-				if (!this.messageGate.allowLegacy()) {
+				// A newer importer sends the typed twin of this message as well; act on that one only.
+				if (!this.messageGate.allowLegacy(legacy.type)) {
 					return;
 				}
 				const ended = this.importTracker.observe(legacy);
@@ -147,10 +148,10 @@ export class CSVBoxButton extends Component {
 					handleModalClosed();
 				}
 				if (legacy.type === "uploadSuccessful") {
-					onImport(true);
+					this.props.onImport(true);
 				}
 				if (legacy.type === "uploadFailed") {
-					onImport(false);
+					this.props.onImport(false);
 				}
 				return;
 			}
@@ -198,20 +199,20 @@ export class CSVBoxButton extends Component {
 			if (!message) {
 				return;
 			}
-			this.messageGate.markTyped();
+			this.messageGate.markTyped(message.type);
 			const ended = this.importTracker.observe(message);
 			finishImport(ended);
 
 			if (message.type === "data-on-submit") {
-				onSubmit?.(message.metadata);
+				this.props.onSubmit?.(message.metadata);
 			} else if (message.type === "data-push-status") {
-				onImport(message.success, message.metadata);
+				this.props.onImport(message.success, message.metadata);
 			} else if (message.type === "csvbox-modal-hidden") {
 				handleModalClosed();
 			} else if (message.type === "csvbox-upload-successful") {
-				onImport(true);
+				this.props.onImport(true);
 			} else if (message.type === "csvbox-upload-failed") {
-				onImport(false);
+				this.props.onImport(false);
 			}
 		};
 
@@ -238,7 +239,7 @@ export class CSVBoxButton extends Component {
 			// for the iframe must still go ahead.
 			const openWhenReady = this.lifecycle.markReady();
 			try {
-				onReady?.();
+				this.props.onReady?.();
 			} finally {
 				if (openWhenReady) {
 					this.openModal();
@@ -246,6 +247,11 @@ export class CSVBoxButton extends Component {
 			}
 		};
 
+		// The full-screen layer goes on <body>. Inside a parent with a CSS transform, filter or contain, `position: fixed`
+		// would fill that parent instead of the screen (a button inside an animated modal, for example).
+		if (this.holder.current.parentNode !== document.body) {
+			document.body.appendChild(this.holder.current);
+		}
 		this.holder.current.appendChild(iframe);
 	}
 
@@ -383,6 +389,10 @@ export class CSVBoxButton extends Component {
 	// mount, so a remount (React 18 StrictMode in development) initialises it again.
 	teardown() {
 		this.destroyImporter();
+		// It was moved to <body> when the importer started, so it is not removed together with the component.
+		if (this.holder.current && this.holder.current.parentNode === document.body) {
+			this.holder.current.remove();
+		}
 		if (this.unsubscribeOpenImporters) {
 			this.unsubscribeOpenImporters();
 			this.unsubscribeOpenImporters = null;
